@@ -37,6 +37,13 @@ class NewGELU(nn.Module):
 
 # using a global to toggle flash-attention
 FLASH = 0
+PYTORCH_2_2_0 = "V2.2.0"
+def compatible_normal(weight, mean, std, generator):
+    if torch.__version__ >= PYTORCH_2_2_0:
+        torch.nn.init.normal_(weight, mean, std, generator)
+    else:
+        torch.nn.init.normal_(weight, mean, std)
+
 
 class CausalSelfAttention(nn.Module):
 
@@ -143,11 +150,11 @@ class GPT(nn.Module):
             # we want to skip initializing lm_head, which shares parameters with wte
             # and wte was already initialized down below during the Embedding init
             if not hasattr(module, 'LLMC_SKIP_INIT'):
-                torch.nn.init.normal_(module.weight, mean=0.0, std=std, generator=self.init_rng)
+                compatible_normal(module.weight, mean=0.0, std=std, generator=self.init_rng)
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02, generator=self.init_rng)
+            compatible_normal(module.weight, mean=0.0, std=0.02 , generator=self.init_rng)
 
     def forward(self, idx, targets=None, return_logits=True):
         device = idx.device
